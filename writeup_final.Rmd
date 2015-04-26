@@ -1,0 +1,111 @@
+---
+title: "Writeup"
+author: "Filip Floegel"
+date: "Monday, April 20, 2015"
+output: html_document
+---
+
+The goal this project is to predict the "classe" variable in the training set. First I try to do it using a simple logistic regression model. Doing so I need to impute missing values. Infact the random forest algo which I used afterwords used the imputed variables. Befor imputing missings I was deleting the attributes with near zero information using nearZeroVar. The default method in caret is the bootstrap method which spilts the training data into training and testing data in order to estimate the out of sample error (accuracy).
+
+Comment: I build the model with the code below but because of time consuming model building while the knitr process I saved the required models using save. so while I wrote this knitr I load the important obkects again
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+load("model2.RData")
+# save(modelRF, modelGLM, preObj, modelCVGLM, file="model2.RData")
+```
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+library(caret)
+library("RANN")
+```
+
+First read the training data
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+TrainData <- read.csv("pml-training.csv", na.strings=c("#DIV/0!","NA"))
+```
+
+than split the Training Data into train (50%) and test (50%)
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+inTrain <- createDataPartition(TrainData$classe, p=0.5, list=FALSE)
+train <- TrainData[inTrain,]
+test <- TrainData[-inTrain,]
+```
+
+now lets get the attributes which dont play a role for our model using nearZeroVar (no variance)
+
+```{r, message=FALSE, warning=FALSE}
+nsv <- nearZeroVar(TrainData,saveMetrics = TRUE)
+```
+
+for the general model (logistic regression) you need to impute the missing values. so did i:
+
+```{r, message=FALSE, warning=FALSE}
+preObj <- preProcess(train[,-c(c(1:5,7,8,160),which(nsv$nzv))], method="knnImpute")
+trainImp <- predict(preObj,train[, -c(c(1:5,7,8,160),which(nsv$nzv))])
+#modelGLM <- train(train$classe ~ . , method="multinom", data=trainImp)
+modelGLM
+```
+
+now lets compare the estimated accuracy with the accuracy of the prediction of the unseen testing data
+
+```{r, message=FALSE, warning=FALSE}
+testImp <- predict(preObj,test[, -c(c(1:5,7,8,160),which(nsv$nzv))])
+confusionMatrix(test$classe, predict(modelGLM, testImp))
+```
+
+the estimated accuracy is much larger then the accuracy measured with the testings data. that doesnt look good. I also tried the cross validation method by  specifying the train control parameter to caret
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+fitControl <- trainControl(## 10-fold CV
+                           method = "cv",
+                           number = 4)
+```
+
+```{r, message=FALSE, warning=FALSE}
+#modelCVGLM <- train(train$classe ~ . , method="multinom", trControl = fitControl, data=trainImp)
+modelCVGLM
+```
+
+the estimated accuracy with the 4-fold cross validation method is almost the same as the default 25-bootstrapped method of caret.
+
+Due to very low accuracy I decided to use the best also which is random forest.
+
+```{r, message=FALSE, warning=FALSE}
+#modelRF <- train(train$classe ~ ., data=trainImp , method="rf", prox=TRUE)
+modelRF
+```
+
+with random forest I have got a accuracy of 0.9750128. It is the estimate of the out of sample error using Bootstrapped (25 reps). I you compare it with the accuracy  
+
+```{r, message=FALSE, warning=FALSE}
+confusionMatrix(test$classe, predict(modelRF, testImp))
+```
+
+The estimated accuracy with 0.9750128 is quite close to the accuracy 0.9781 measured with the testings data. that looks quite good.
+
+Last part is prediction of the real test data
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+TestData <- read.csv("pml-testing.csv", na.strings=c("#DIV/0!","NA"))
+```
+
+Those data we need to preprocess like the training data as well. first impute than predict using the random forest model.
+
+```{r, message=FALSE, warning=FALSE}
+TestDataImp <- predict(preObj,TestData[, -c(c(1:5,7,8,160),which(nsv$nzv))])
+TestDataPred <- predict(modelRF, TestDataImp)
+```
+
+```{r, message=FALSE, warning=FALSE}
+source("pml_write_files.R")
+```
+
+```{r, message=FALSE, warning=FALSE}
+dir.create("subData")
+setwd("subData")
+pml_write_files(TestDataPred)
+```
+
+finito
