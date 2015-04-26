@@ -58,10 +58,16 @@ if (window.hljs && document.readyState && document.readyState === "complete") {
 </div>
 
 
-<p>The goal this project is to predict the “classe” variable in the training set. First I try to do it using a simple logistic regression model. Doing so I need to impute missing values. Infact the random forest algo which I used afterwords used the imputed variables. Befor imputing missings I was deleting the attributes with near zero information using nearZeroVar. The default method in caret is the bootstrap method which spilts the training data into training and testing data in order to estimate the out of sample error (accuracy).</p>
+<p>The goal in this project is to predict the “classe” variable in the training set. First I try to do it using a simple logistic regression model. Doing so I need to impute missing values. Infact the random forest algo which I used afterwords used the imputed variables. Befor imputing missings I was deleting the attributes with near zero information using nearZeroVar. The default method in caret is the bootstrap method which spilts the training data into training and testing data in order to estimate the out of sample error (accuracy).</p>
 <p>Comment: I build the model with the code below but because of time consuming model building while the knitr process I saved the required models using save. so while I wrote this knitr I load the important obkects again</p>
+<pre class="r"><code>load(&quot;model2.RData&quot;)
+# save(modelRF, modelGLM, preObj, modelCVGLM, file=&quot;model2.RData&quot;)</code></pre>
 <p>First read the training data</p>
+<pre class="r"><code>TrainData &lt;- read.csv(&quot;pml-training.csv&quot;, na.strings=c(&quot;#DIV/0!&quot;,&quot;NA&quot;))</code></pre>
 <p>than split the Training Data into train (50%) and test (50%)</p>
+<pre class="r"><code>inTrain &lt;- createDataPartition(TrainData$classe, p=0.5, list=FALSE)
+train &lt;- TrainData[inTrain,]
+test &lt;- TrainData[-inTrain,]</code></pre>
 <p>now lets get the attributes which dont play a role for our model using nearZeroVar (no variance)</p>
 <pre class="r"><code>nsv &lt;- nearZeroVar(TrainData,saveMetrics = TRUE)</code></pre>
 <p>for the general model (logistic regression) you need to impute the missing values. so did i:</p>
@@ -96,34 +102,37 @@ confusionMatrix(test$classe, predict(modelGLM, testImp))</code></pre>
 ## 
 ##           Reference
 ## Prediction    A    B    C    D    E
-##          A 2280  145  166  101   98
-##          B  203 1118  227  105  245
-##          C  164  167 1116  180   84
-##          D  148   73  252 1016  119
-##          E  111  219  160  123 1190
+##          A 2281  161  146   96  106
+##          B  185 1187  185   92  249
+##          C  211  193 1045  142  120
+##          D  107   75  211 1031  184
+##          E   89  221  151  128 1214
 ## 
 ## Overall Statistics
-##                                           
-##                Accuracy : 0.685           
-##                  95% CI : (0.6757, 0.6942)
-##     No Information Rate : 0.2962          
-##     P-Value [Acc &gt; NIR] : &lt; 2.2e-16       
-##                                           
-##                   Kappa : 0.6011          
-##  Mcnemar's Test P-Value : 2.332e-11       
+##                                          
+##                Accuracy : 0.6889         
+##                  95% CI : (0.6796, 0.698)
+##     No Information Rate : 0.2929         
+##     P-Value [Acc &gt; NIR] : &lt; 2.2e-16      
+##                                          
+##                   Kappa : 0.606          
+##  Mcnemar's Test P-Value : 1.303e-06      
 ## 
 ## Statistics by Class:
 ## 
 ##                      Class: A Class: B Class: C Class: D Class: E
-## Sensitivity            0.7846   0.6492   0.5809   0.6662   0.6855
-## Specificity            0.9261   0.9036   0.9246   0.9285   0.9241
-## Pos Pred Value         0.8172   0.5890   0.6523   0.6318   0.6600
-## Neg Pred Value         0.9108   0.9237   0.9006   0.9379   0.9318
-## Prevalence             0.2962   0.1755   0.1958   0.1555   0.1770
-## Detection Rate         0.2324   0.1140   0.1138   0.1036   0.1213
+## Sensitivity            0.7939   0.6462   0.6013   0.6924   0.6482
+## Specificity            0.9266   0.9108   0.9175   0.9307   0.9258
+## Pos Pred Value         0.8176   0.6254   0.6108   0.6412   0.6733
+## Neg Pred Value         0.9157   0.9178   0.9144   0.9442   0.9177
+## Prevalence             0.2929   0.1873   0.1772   0.1518   0.1909
+## Detection Rate         0.2325   0.1210   0.1065   0.1051   0.1238
 ## Detection Prevalence   0.2844   0.1935   0.1744   0.1639   0.1838
-## Balanced Accuracy      0.8554   0.7764   0.7528   0.7974   0.8048</code></pre>
+## Balanced Accuracy      0.8603   0.7785   0.7594   0.8115   0.7870</code></pre>
 <p>the estimated accuracy is much larger then the accuracy measured with the testings data. that doesnt look good. I also tried the cross validation method by specifying the train control parameter to caret</p>
+<pre class="r"><code>fitControl &lt;- trainControl(## 10-fold CV
+                           method = &quot;cv&quot;,
+                           number = 4)</code></pre>
 <pre class="r"><code>#modelCVGLM &lt;- train(train$classe ~ . , method=&quot;multinom&quot;, trControl = fitControl, data=trainImp)
 modelCVGLM</code></pre>
 <pre><code>## Penalized Multinomial Regression 
@@ -176,35 +185,36 @@ modelRF</code></pre>
 ## 
 ##           Reference
 ## Prediction    A    B    C    D    E
-##          A 2785    4    0    1    0
-##          B   44 1834   13    6    1
-##          C    0   37 1649   24    1
-##          D    0    9  101 1498    0
-##          E    0    0   22   12 1769
+##          A 2761   11    0   18    0
+##          B   68 1810   16    4    0
+##          C   22   36 1614   39    0
+##          D    2   71  104 1430    1
+##          E    0    1    7   20 1775
 ## 
 ## Overall Statistics
-##                                           
-##                Accuracy : 0.972           
-##                  95% CI : (0.9685, 0.9751)
-##     No Information Rate : 0.2884          
-##     P-Value [Acc &gt; NIR] : &lt; 2.2e-16       
-##                                           
-##                   Kappa : 0.9645          
-##  Mcnemar's Test P-Value : NA              
+##                                          
+##                Accuracy : 0.9572         
+##                  95% CI : (0.953, 0.9611)
+##     No Information Rate : 0.2908         
+##     P-Value [Acc &gt; NIR] : &lt; 2.2e-16      
+##                                          
+##                   Kappa : 0.9458         
+##  Mcnemar's Test P-Value : NA             
 ## 
 ## Statistics by Class:
 ## 
 ##                      Class: A Class: B Class: C Class: D Class: E
-## Sensitivity            0.9844   0.9735   0.9238   0.9721   0.9989
-## Specificity            0.9993   0.9919   0.9923   0.9867   0.9958
-## Pos Pred Value         0.9982   0.9663   0.9638   0.9316   0.9811
-## Neg Pred Value         0.9937   0.9937   0.9832   0.9948   0.9998
-## Prevalence             0.2884   0.1920   0.1820   0.1571   0.1805
-## Detection Rate         0.2839   0.1870   0.1681   0.1527   0.1803
+## Sensitivity            0.9678   0.9383   0.9271   0.9464   0.9994
+## Specificity            0.9958   0.9888   0.9880   0.9786   0.9965
+## Pos Pred Value         0.9896   0.9536   0.9433   0.8893   0.9845
+## Neg Pred Value         0.9869   0.9850   0.9843   0.9901   0.9999
+## Prevalence             0.2908   0.1966   0.1775   0.1540   0.1810
+## Detection Rate         0.2814   0.1845   0.1645   0.1458   0.1809
 ## Detection Prevalence   0.2844   0.1935   0.1744   0.1639   0.1838
-## Balanced Accuracy      0.9919   0.9827   0.9580   0.9794   0.9973</code></pre>
+## Balanced Accuracy      0.9818   0.9636   0.9575   0.9625   0.9980</code></pre>
 <p>The estimated accuracy with 0.9750128 is quite close to the accuracy 0.9781 measured with the testings data. that looks quite good.</p>
 <p>Last part is prediction of the real test data</p>
+<pre class="r"><code>TestData &lt;- read.csv(&quot;pml-testing.csv&quot;, na.strings=c(&quot;#DIV/0!&quot;,&quot;NA&quot;))</code></pre>
 <p>Those data we need to preprocess like the training data as well. first impute than predict using the random forest model.</p>
 <pre class="r"><code>TestDataImp &lt;- predict(preObj,TestData[, -c(c(1:5,7,8,160),which(nsv$nzv))])
 TestDataPred &lt;- predict(modelRF, TestDataImp)</code></pre>

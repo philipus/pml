@@ -5,11 +5,11 @@ date: "Monday, April 20, 2015"
 output: html_document
 ---
 
-The goal this project is to predict the "classe" variable in the training set. First I try to do it using a simple logistic regression model. Doing so I need to impute missing values. Infact the random forest algo which I used afterwords used the imputed variables. Befor imputing missings I was deleting the attributes with near zero information using nearZeroVar. The default method in caret is the bootstrap method which spilts the training data into training and testing data in order to estimate the out of sample error (accuracy).
+The goal in this project is to predict the "classe" variable in the training set. First I try to do it using a simple logistic regression model. Doing so I need to impute missing values. Infact the random forest algo which I used afterwords used the imputed variables. Befor imputing missings I was deleting the attributes with near zero information using nearZeroVar. The default method in caret is the bootstrap method which spilts the training data into training and testing data in order to estimate the out of sample error (accuracy).
 
 Comment: I build the model with the code below but because of time consuming model building while the knitr process I saved the required models using save. so while I wrote this knitr I load the important obkects again
 
-```{r, echo=FALSE, message=FALSE, warning=FALSE}
+```{r, echo=T, message=FALSE, warning=FALSE}
 load("model2.RData")
 # save(modelRF, modelGLM, preObj, modelCVGLM, file="model2.RData")
 ```
@@ -21,13 +21,13 @@ library("RANN")
 
 First read the training data
 
-```{r, echo=FALSE, message=FALSE, warning=FALSE}
+```{r, echo=T, message=FALSE, warning=FALSE}
 TrainData <- read.csv("pml-training.csv", na.strings=c("#DIV/0!","NA"))
 ```
 
 than split the Training Data into train (50%) and test (50%)
 
-```{r, echo=FALSE, message=FALSE, warning=FALSE}
+```{r, echo=T, message=FALSE, warning=FALSE}
 inTrain <- createDataPartition(TrainData$classe, p=0.5, list=FALSE)
 train <- TrainData[inTrain,]
 test <- TrainData[-inTrain,]
@@ -57,7 +57,7 @@ confusionMatrix(test$classe, predict(modelGLM, testImp))
 
 the estimated accuracy is much larger then the accuracy measured with the testings data. that doesnt look good. I also tried the cross validation method by  specifying the train control parameter to caret
 
-```{r, echo=FALSE, message=FALSE, warning=FALSE}
+```{r, echo=T, message=FALSE, warning=FALSE}
 fitControl <- trainControl(## 10-fold CV
                            method = "cv",
                            number = 4)
@@ -87,7 +87,7 @@ The estimated accuracy with 0.9750128 is quite close to the accuracy 0.9781 meas
 
 Last part is prediction of the real test data
 
-```{r, echo=FALSE, message=FALSE, warning=FALSE}
+```{r, echo=T, message=FALSE, warning=FALSE}
 TestData <- read.csv("pml-testing.csv", na.strings=c("#DIV/0!","NA"))
 ```
 
